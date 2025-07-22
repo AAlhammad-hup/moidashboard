@@ -2,73 +2,63 @@ import streamlit as st
 import snscrape.modules.twitter as sntwitter
 import pandas as pd
 from transformers import pipeline
-from googletrans import Translator
-import subprocess
-import json
+from deep_translator import GoogleTranslator
 
 # إعداد النموذج والمترجم
 sentiment_model = pipeline("sentiment-analysis", model="nlptown/bert-base-multilingual-uncased-sentiment")
-translator = Translator()
+
+def translate_text(text, target_language):
+    return GoogleTranslator(source='auto', target=target_language).translate(text)
 
 # لغة الواجهة
 language = st.sidebar.selectbox("🌐 اختر اللغة | Select Language", ["العربية", "English"])
 is_arabic = language == "العربية"
 
-# عناوين القطاعات التي سيتم تحليل التغريدات عنها
-MOI_SECTORS = [
-    "الدفاع المدني",
-    "المديرية العامة للأمن العام",
-    "المديرية العامة لمكافحة المخدرات",
-    "المديرية العامة للجوازات",
-    "المديرية العامة للسجون",
-    "المديرية العامة لحرس الحدود",
-    "القوات الخاصة للأمن البيئي",
-    "القوات الخاصة للأمن والحماية",
-    "كلية الملك فهد الأمنية",
-    "وكالة وزارة الداخلية للأحوال المدنية",
-    "مركز المعلومات الوطني",
-    "المركز الوطني للعمليات الأمنية الموحدة",
-    "مركز أبحاث مكافحة الجريمة",
-    "قوات أمن المنشآت",
-    "الإدارة العامة للخدمات الطبية",
-    "الإدارة العامة لأندية منسوبي وزارة الداخلية",
-    "الإدارة العامة للمجاهدين",
-    "ديوان وزارة الداخلية"
+# عنوان الواجهة
+st.title("لوحة الرصد الأمني" if is_arabic else "Security Sentiment Dashboard")
+st.markdown("تحليل رأي الجمهور حول خدمات وزارة الداخلية" if is_arabic else "Analyzing public opinion on Ministry of Interior services")
+
+# قائمة القطاعات الأمنية
+sectors_ar = [
+    "الأمن العام", "مكافحة المخدرات", "الجوازات", "السجون", "حرس الحدود", 
+    "الأمن البيئي", "قوات الأمن الخاصة", "كلية الملك فهد الأمنية", "الأحوال المدنية", 
+    "مركز المعلومات الوطني", "مركز العمليات الموحدة", "مركز أبحاث الجريمة",
+    "قوات أمن المنشآت", "الخدمات الطبية", "أندية الوزارة", "الإدارة العامة للمجاهدين", "ديوان الوزارة", "الدفاع المدني"
+]
+sectors_en = [
+    "Public Security", "Narcotics Control", "Passports", "Prisons", "Border Guards", 
+    "Environmental Security", "Special Security Forces", "King Fahd Security College", "Civil Affairs", 
+    "National Information Center", "Unified Operations Center", "Crime Research Center", 
+    "Facilities Security Forces", "Medical Services", "Ministry Clubs", "Mujahideen Administration", "MOI Diwan", "Civil Defense"
 ]
 
-# عرض عنوان الواجهة
-st.title("📊 لوحة تحليل الرأي العام لقطاعات وزارة الداخلية" if is_arabic else "📊 Public Sentiment Dashboard for MOI Sectors")
+sectors = sectors_ar if is_arabic else sectors_en
 
-# تحميل وتحليل التغريدات
-results = []
+selected_sector = st.selectbox("اختر القطاع الأمني" if is_arabic else "Select Security Sector", sectors)
+query = st.text_input("اكتب استعلام البحث (كلمة مفتاحية أو وسم)" if is_arabic else "Enter your search query (keyword or hashtag)")
+limit = st.slider("عدد التغريدات" if is_arabic else "Number of tweets", 10, 200, 50)
 
-for sector in MOI_SECTORS:
-    query = f"{sector} lang:ar"
-    tweets = []
-    for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query).get_items()):
-        if i > 20:
-            break
-        tweets.append(tweet.content)
+if st.button("ابدأ التحليل" if is_arabic else "Start Analysis"):
+    if not query:
+        st.warning("يرجى إدخال استعلام" if is_arabic else "Please enter a query.")
+    else:
+        search_term = f"{selected_sector} {query}"
+        tweets = []
+        for i, tweet in enumerate(sntwitter.TwitterSearchScraper(search_term).get_items()):
+            if i >= limit:
+                break
+            tweets.append(tweet.content)
 
-    for text in tweets:
-        try:
-            translated = translator.translate(text, dest="en").text
-            sentiment = sentiment_model(translated)[0]
-            results.append({
-                "القطاع" if is_arabic else "Sector": sector,
-                "النص الأصلي" if is_arabic else "Original Text": text,
-                "الترجمة" if is_arabic else "Translation": translated,
-                "الرأي" if is_arabic else "Sentiment": sentiment["label"],
-                "درجة الثقة" if is_arabic else "Confidence": round(sentiment["score"] * 100, 2)
-            })
-        except Exception as e:
-            continue
+        df = pd.DataFrame(tweets, columns=["Text"])
 
-# عرض النتائج
-if results:
-    df = pd.DataFrame(results)
-    st.dataframe(df)
-    sentiment_summary = df.groupby("القطاع" if is_arabic else "Sector")["الرأي" if is_arabic else "Sentiment"].value_counts().unstack().fillna(0)
-    st.bar_chart(sentiment_summary)
-else:
-    st.info("لم يتم العثور على نتائج." if is_arabic else "No results found.")
+        if is_arabic:
+            df["Translated"] = df["Text"].apply(lambda x: translate_text(x, "en"))
+            df["Sentiment"] = df["Translated"].apply(lambda x: sentiment_model(x)[0]["label"])
+        else:
+            df["Sentiment"] = df["Text"].apply(lambda x: sentiment_model(x)[0]["label"])
+
+        st.subheader("النتائج" if is_arabic else "Results")
+        st.write(df)
+
+        st.subheader("التحليل العام" if is_arabic else "Overall Analysis")
+        st.bar_chart(df["Sentiment"].value_counts())
