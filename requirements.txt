@@ -1,6 +1,6 @@
 streamlit
-snscrape
+snscrape==0.4.3.20220106
 transformers
 torch
-googletrans==4.0.0-rc1
+googletrans==4.0.0rc1
 pandas
