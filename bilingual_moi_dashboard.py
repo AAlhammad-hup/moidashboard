@@ -1,7 +1,6 @@
 
 import streamlit as st
-import snscrape.modules as snmodules
-sntwitter = snmodules.twitter
+import snscrape.modules.twitter as sntwitter  
 import pandas as pd
 from transformers import pipeline
 from googletrans import Translator
