@@ -1,8 +1,0 @@
-streamlit
-snscrape==0.4.3.20220106
-transformers
-torch
-deep-translator
-pandas
-
-
