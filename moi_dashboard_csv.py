@@ -12,30 +12,28 @@ df = load_data()
 language = st.sidebar.selectbox("🌐 اختر اللغة | Select Language", ["العربية", "English"])
 is_arabic = language == "العربية"
 
-# ترجمة القطاعات
+# قاموس الترجمة بين العربي والإنجليزي
 sector_translation = {
-    "Civil Defense": "الدفاع المدني",
-    "Public Security": "الأمن العام",
-    "Passports": "الجوازات",
-    "Traffic": "المرور",
-    "Prisons": "السجون",
-    "Narcotics Control": "مكافحة المخدرات",
-    "Border Guards": "حرس الحدود",
-    "Civil Affairs": "الأحوال المدنية",
-    "Environmental Security": "الأمن البيئي",
-    "Facilities Security Forces": "قوات أمن المنشآت",
-    "Medical Services": "الخدمات الطبية",
-    "Ministry Clubs Administration": "أندية منسوبي الوزارة",
-    "Mujahideen Administration": "الإدارة العامة للمجاهدين",
-    "King Fahd Security College": "كلية الملك فهد الأمنية",
-    "Security Protection Forces": "قوات الأمن الخاصة",
-    "Unified Operations Center": "المركز الوطني للعمليات الأمنية الموحدة",
-    "Crime Research Center": "مركز أبحاث مكافحة الجريمة",
-    "MOI Diwan": "ديوان وزارة الداخلية",
-    "National Information Center": "مركز المعلومات الوطني"
+    "الدفاع المدني": "Civil Defense",
+    "الأمن العام": "Public Security",
+    "الجوازات": "Passports",
+    "المرور": "Traffic",
+    "السجون": "Prisons",
+    "مكافحة المخدرات": "Narcotics Control",
+    "حرس الحدود": "Border Guards",
+    "الأحوال المدنية": "Civil Affairs",
+    "الأمن البيئي": "Environmental Security",
+    "قوات أمن المنشآت": "Facilities Security Forces",
+    "الخدمات الطبية": "Medical Services",
+    "أندية الوزارة": "Ministry Clubs Administration",
+    "الإدارة العامة للمجاهدين": "Mujahideen Administration",
+    "كلية الملك فهد الأمنية": "King Fahd Security College",
+    "قوات الأمن الخاصة": "Security Protection Forces",
+    "مركز العمليات الموحدة": "Unified Operations Center",
+    "مركز أبحاث الجريمة": "Crime Research Center",
+    "ديوان الوزارة": "MOI Diwan",
+    "مركز المعلومات الوطني": "National Information Center"
 }
-
-# عكس الترجمة
 sector_translation_rev = {v: k for k, v in sector_translation.items()}
 
 # ترجمة المشاعر
@@ -46,29 +44,29 @@ sentiment_translation = {
 }
 sentiment_translation_rev = {v: k for k, v in sentiment_translation.items()}
 
-# إعداد الصفحة
+# واجهة المستخدم
 st.title("لوحة الرصد الأمني" if is_arabic else "Security Sentiment Dashboard")
 st.markdown("تحليل رأي الجمهور حول خدمات وزارة الداخلية" if is_arabic else "Analyzing public opinion on Ministry of Interior services")
 
-# عرض القطاعات
-unique_sectors = df["Sector"].unique()
-if is_arabic:
-    display_sectors = [sector_translation.get(s, s) for s in unique_sectors]
-else:
-    display_sectors = list(unique_sectors)
+# القطاعات من الملف (كلها بالعربية)
+available_ar_sectors = sorted(df["Sector"].unique())
+available_en_sectors = [sector_translation.get(sec, sec) for sec in available_ar_sectors]
 
-selected_display = st.selectbox("اختر القطاع الأمني" if is_arabic else "Select Security Sector", sorted(display_sectors))
+selected_sector_display = st.selectbox(
+    "اختر القطاع الأمني" if is_arabic else "Select Security Sector",
+    available_ar_sectors if is_arabic else available_en_sectors
+)
 
-# تحديد اسم القطاع الحقيقي
+# تحويل القطاع المختار إلى العربية لتصفية البيانات
 if is_arabic:
-    selected_sector = sector_translation_rev.get(selected_display, selected_display)
+    selected_arabic_sector = selected_sector_display
 else:
-    selected_sector = selected_display
+    selected_arabic_sector = sector_translation_rev.get(selected_sector_display, selected_sector_display)
 
 # تصفية البيانات
-filtered_df = df[df["Sector"] == selected_sector].copy()
+filtered_df = df[df["Sector"] == selected_arabic_sector].copy()
 
-# ترجمة الأعمدة والمشاعر
+# عرض النتائج
 if is_arabic:
     filtered_df["الرأي"] = filtered_df["Sentiment"].map(sentiment_translation).fillna("غير معروف")
     filtered_df["النص"] = filtered_df["Text"]
