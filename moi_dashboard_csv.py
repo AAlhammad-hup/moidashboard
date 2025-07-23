@@ -1,32 +1,34 @@
 import streamlit as st
 import pandas as pd
+from deep_translator import GoogleTranslator
 
-# إعداد الترجمة للواجهة
-LANGUAGES = {
-    "العربية": {
-        "title": "لوحة الرصد الأمني",
-        "description": "تحليل رأي الجمهور حول خدمات وزارة الداخلية",
-        "select_language": "🌐 اختر اللغة",
-        "select_sector": "اختر القطاع الأمني",
-        "results": "النتائج",
-        "analysis": "التحليل العام",
-        "text": "النص",
-        "sentiment": "الرأي"
-    },
-    "English": {
-        "title": "Security Sentiment Dashboard",
-        "description": "Analyzing public opinion on Ministry of Interior services",
-        "select_language": "🌐 Select Language",
-        "select_sector": "Select Security Sector",
-        "results": "Results",
-        "analysis": "Overall Analysis",
-        "text": "Text",
-        "sentiment": "Sentiment"
-    }
+# --- تحميل البيانات ---
+@st.cache_data
+def load_data():
+    df = pd.read_csv("moi_sentiment_data.csv")
+    df["Text"] = df["Text"].astype(str)
+    df["Sector"] = df["Sector"].astype(str)
+    return df
+
+df = load_data()
+
+# --- إعدادات اللغة ---
+language = st.sidebar.selectbox("🌐 اختر اللغة | Select Language", ["العربية", "English"])
+is_arabic = (language == "العربية")
+
+# --- النصوص ---
+texts = {
+    "title": "لوحة الرصد الأمني" if is_arabic else "Security Sentiment Dashboard",
+    "desc": "تحليل رأي الجمهور حول خدمات وزارة الداخلية" if is_arabic else "Analyzing public opinion on Ministry of Interior services",
+    "select_sector": "اختر القطاع الأمني" if is_arabic else "Select Security Sector",
+    "results": "النتائج" if is_arabic else "Results",
+    "analysis": "التحليل العام" if is_arabic else "Overall Analysis",
+    "text": "النص" if is_arabic else "Text",
+    "sentiment": "الرأي" if is_arabic else "Sentiment"
 }
 
-# ترجمة أسماء القطاعات
-SECTOR_TRANSLATIONS = {
+# --- ترجمة أسماء القطاعات ---
+sector_names = {
     "الدفاع المدني": "Civil Defense",
     "الأمن العام": "Public Security",
     "مكافحة المخدرات": "Narcotics Control",
@@ -38,60 +40,49 @@ SECTOR_TRANSLATIONS = {
     "كلية الملك فهد الأمنية": "King Fahd Security College",
     "الأحوال المدنية": "Civil Affairs",
     "مركز المعلومات الوطني": "National Information Center",
-    "مركز العمليات الموحد": "Unified Operations Center",
+    "مركز العمليات الموحدة": "Unified Operations Center",
     "مركز أبحاث الجريمة": "Crime Research Center",
     "قوات أمن المنشآت": "Facilities Security Forces",
     "الخدمات الطبية": "Medical Services",
-    "إدارة الأندية": "Ministry Clubs Administration",
+    "إدارة أندية الوزارة": "Ministry Clubs Administration",
     "إدارة المجاهدين": "Mujahideen Administration",
     "ديوان الوزارة": "MOI Diwan"
 }
 
-# اختيار اللغة
-language = st.sidebar.selectbox(LANGUAGES["English"]["select_language"], ["العربية", "English"])
-texts = LANGUAGES[language]
-is_arabic = language == "العربية"
+# إعادة ترتيب القطاعات لتكون "الدفاع المدني" أولًا
+ordered_sectors = ["الدفاع المدني"] + sorted([s for s in sector_names if s != "الدفاع المدني"])
 
-# عنوان الصفحة
-st.title(texts["title"])
-st.markdown(texts["description"])
+# --- تحديد القطاع ---
+sector_label = texts["select_sector"]
+selected_sector_ar = st.selectbox(sector_label, ordered_sectors)
 
-# تحميل البيانات
-@st.cache_data
-def load_data():
-    return pd.read_csv("moi_sentiment_data.csv")
+# --- التصفية ---
+filtered_df = df[df["Sector"] == selected_sector_ar].copy()
 
-df = load_data()
+# --- حذف اسم القطاع من بداية النص ---
+filtered_df["Text"] = filtered_df["Text"].str.replace(f"{selected_sector_ar}[:：،\-]*", "", regex=True).str.strip()
 
-# إعداد القطاع بحسب اللغة
-if is_arabic:
-    sectors = sorted(df["Sector"].unique())
-else:
-    sectors = sorted([SECTOR_TRANSLATIONS.get(sec, sec) for sec in df["Sector"].unique()])
-
-# اختيار القطاع
-selected_sector_display = st.selectbox(texts["select_sector"], sectors)
-
-# إعادة الترجمة العكسية إذا كانت إنجليزية
+# --- الترجمة التلقائية في حال اختيار اللغة الإنجليزية ---
 if not is_arabic:
-    reverse_map = {v: k for k, v in SECTOR_TRANSLATIONS.items()}
-    selected_sector = reverse_map.get(selected_sector_display, selected_sector_display)
+    translator = GoogleTranslator(source='auto', target='en')
+    filtered_df["Text"] = filtered_df["Text"].apply(lambda x: translator.translate(x) if isinstance(x, str) else x)
+    selected_sector_display = sector_names.get(selected_sector_ar, selected_sector_ar)
 else:
-    selected_sector = selected_sector_display
+    selected_sector_display = selected_sector_ar
 
-# تصفية البيانات
-filtered_df = df[df["Sector"] == selected_sector].copy()
+# --- العناوين ---
+st.title(texts["title"])
+st.markdown(texts["desc"])
 
-# إزالة اسم القطاع من بداية النص
-filtered_df["Text"] = filtered_df["Text"].str.replace(f"{selected_sector}[:،]*", "", regex=True).str.strip()
-
-# عرض النتائج
+# --- عرض النتائج ---
 st.subheader(texts["results"])
-st.write(filtered_df[[texts["text"], texts["sentiment"]]].rename(columns={
-    "Text": texts["text"],
-    "Sentiment": texts["sentiment"]
-}))
+st.write(
+    filtered_df[["Text", "Sentiment"]].rename(columns={
+        "Text": texts["text"],
+        "Sentiment": texts["sentiment"]
+    })
+)
 
-# عرض الرسم البياني
+# --- تحليل المشاعر ---
 st.subheader(texts["analysis"])
 st.bar_chart(filtered_df["Sentiment"].value_counts())
