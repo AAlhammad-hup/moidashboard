@@ -6,8 +6,8 @@ from deep_translator import GoogleTranslator
 @st.cache_data
 def load_data():
     df = pd.read_csv("moi_sentiment_data.csv")
-    df["Text"] = df["Text"].astype(str)
-    df["Sector"] = df["Sector"].astype(str)
+    df["Text"] = df["Text"].astype(str).str.strip()
+    df["Sector"] = df["Sector"].astype(str).str.strip()
     return df
 
 df = load_data()
@@ -59,7 +59,7 @@ selected_sector_ar = st.selectbox(sector_label, ordered_sectors)
 # --- التصفية ---
 filtered_df = df[df["Sector"] == selected_sector_ar].copy()
 
-# --- حذف اسم القطاع من بداية النص ---
+# --- حذف اسم القطاع من بداية النص إن وجد ---
 filtered_df["Text"] = filtered_df["Text"].str.replace(f"{selected_sector_ar}[:：،\-]*", "", regex=True).str.strip()
 
 # --- الترجمة التلقائية في حال اختيار اللغة الإنجليزية ---
