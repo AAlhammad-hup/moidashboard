@@ -1,6 +1,8 @@
 streamlit
 snscrape==0.4.3.20220106
-transformers>=4.38.2
-torch>=2.0.0
-deep-translator>=1.11.4
+transformers
+torch
+deep-translator
 pandas
+praw
+youtube-comment-downloader
