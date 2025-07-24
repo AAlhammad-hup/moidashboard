@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from deep_translator import GoogleTranslator
-import matplotlib.pyplot as plt
+import plotly.express as px
 
 # ----------------------------
 # تحميل البيانات
@@ -75,6 +75,16 @@ selected_arabic_sector = selected_sector_display if is_arabic else sector_transl
 filtered_df = df[df["Sector"] == selected_arabic_sector].copy()
 
 # ----------------------------
+# إزالة اسم القطاع من النص
+# ----------------------------
+def clean_comment(text, sector_name):
+    if isinstance(text, str) and text.startswith(sector_name):
+        return text.replace(sector_name + ":", "").strip()
+    return text
+
+filtered_df["Text"] = filtered_df["Text"].apply(lambda x: clean_comment(x, selected_arabic_sector))
+
+# ----------------------------
 # الترجمة الفعلية
 # ----------------------------
 def translate_text(text, target="en"):
@@ -126,16 +136,14 @@ c3.metric(title_neu, f"{neu:,}", f"{(neu/total):.1%}" if total else "0%")
 c4.metric(title_neg, f"{neg:,}", f"{(neg/total):.1%}" if total else "0%")
 
 # ----------------------------
-# رسم مخطط دائري (Pie Chart)
+# رسم مخطط دائري باستخدام Plotly
 # ----------------------------
 st.subheader("النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages")
 labels = [title_pos, title_neu, title_neg]
 values = [pos, neu, neg]
 
-fig, ax = plt.subplots()
-ax.pie(values, labels=labels, autopct="%1.1f%%", startangle=90)
-ax.axis('equal')
-st.pyplot(fig)
+fig = px.pie(names=labels, values=values, title="النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages")
+st.plotly_chart(fig)
 
 # ----------------------------
 # ملخص إحصائي نصي
