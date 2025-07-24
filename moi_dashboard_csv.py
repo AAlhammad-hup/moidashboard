@@ -113,17 +113,30 @@ def load_summarizer():
 
 summarizer = load_summarizer()
 
-def generate_summary(texts, max_chars=2000):
-    # دمج النصوص في نص واحد (مع قص الطول إذا زاد عن الحد)
-    combined = " ".join(texts)
+def generate_summary(texts, max_chars=2000, target_lang="en"):
+    combined = " ".join([t for t in texts if isinstance(t, str)])
+    if not combined.strip():
+        return ""  # لا يوجد نصوص
+
     combined = combined[:max_chars]
     try:
         summary = summarizer(combined, max_length=100, min_length=30, do_sample=False)
-        return summary[0]['summary_text']
+        summary_text = summary[0]['summary_text']
+        if target_lang == "ar":
+            # ترجمة الملخص إلى العربية
+            return GoogleTranslator(source='en', target='ar').translate(summary_text)
+        return summary_text
     except Exception as e:
-        return f"فشل في توليد الملخص: {e}"
+        return ""
 
+# ----------------------------
+# عرض الملخص
+# ----------------------------
 st.subheader("ملخص التعليقات" if is_arabic else "Review Summary")
 reviews_to_summarize = filtered_df["Text"].astype(str).tolist()
-summary_text = generate_summary(reviews_to_summarize)
-st.write(summary_text)
+summary_text = generate_summary(reviews_to_summarize, target_lang="ar" if is_arabic else "en")
+
+if summary_text.strip():
+    st.write(summary_text)
+else:
+    st.write("⚠️ لا توجد تعليقات كافية لعرض الملخص." if is_arabic else "⚠️ No sufficient comments for summary.")
