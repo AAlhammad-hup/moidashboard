@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from deep_translator import GoogleTranslator
-from transformers import pipeline
 
 # ----------------------------
 # تحميل البيانات
@@ -105,38 +104,22 @@ else:
     st.bar_chart(chart_data)
 
 # ----------------------------
-# تلخيص التعليقات باستخدام LLM
+# تلخيص إحصائي بسيط
 # ----------------------------
-@st.cache_resource
-def load_summarizer():
-    return pipeline("summarization", model="facebook/bart-large-cnn")
-
-summarizer = load_summarizer()
-
-def generate_summary(texts, max_chars=2000, target_lang="en"):
-    combined = " ".join([t for t in texts if isinstance(t, str)])
-    if not combined.strip():
-        return ""  # لا يوجد نصوص
-
-    combined = combined[:max_chars]
-    try:
-        summary = summarizer(combined, max_length=100, min_length=30, do_sample=False)
-        summary_text = summary[0]['summary_text']
-        if target_lang == "ar":
-            # ترجمة الملخص إلى العربية
-            return GoogleTranslator(source='en', target='ar').translate(summary_text)
-        return summary_text
-    except Exception as e:
-        return ""
+def simple_summary(df, is_arabic=True):
+    pos = (df["Sentiment"] == "Positive").sum()
+    neg = (df["Sentiment"] == "Negative").sum()
+    neu = (df["Sentiment"] == "Neutral").sum()
+    total = len(df)
+    if total == 0:
+        return "لا توجد تعليقات متاحة." if is_arabic else "No comments available."
+    if is_arabic:
+        return f"إجمالي التعليقات: {total}. الإيجابية: {pos}، السلبية: {neg}، المحايدة: {neu}."
+    else:
+        return f"Total comments: {total}. Positive: {pos}, Negative: {neg}, Neutral: {neu}."
 
 # ----------------------------
 # عرض الملخص
 # ----------------------------
 st.subheader("ملخص التعليقات" if is_arabic else "Review Summary")
-reviews_to_summarize = filtered_df["Text"].astype(str).tolist()
-summary_text = generate_summary(reviews_to_summarize, target_lang="ar" if is_arabic else "en")
-
-if summary_text.strip():
-    st.write(summary_text)
-else:
-    st.write("⚠️ لا توجد تعليقات كافية لعرض الملخص." if is_arabic else "⚠️ No sufficient comments for summary.")
+st.write(simple_summary(filtered_df, is_arabic))
