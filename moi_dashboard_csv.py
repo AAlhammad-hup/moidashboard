@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from deep_translator import GoogleTranslator
+import matplotlib.pyplot as plt
 
 # ----------------------------
 # تحميل البيانات
@@ -104,13 +105,42 @@ else:
     st.bar_chart(chart_data)
 
 # ----------------------------
-# تلخيص إحصائي بسيط
+# احصاءات المشاعر (KPIs)
+# ----------------------------
+counts = filtered_df["Sentiment"].value_counts()
+pos = counts.get("Positive", 0)
+neg = counts.get("Negative", 0)
+neu = counts.get("Neutral", 0)
+total = pos + neg + neu
+
+title_total = "الإجمالي" if is_arabic else "Total"
+title_pos   = "إيجابي"   if is_arabic else "Positive"
+title_neu   = "محايد"    if is_arabic else "Neutral"
+title_neg   = "سلبي"     if is_arabic else "Negative"
+
+st.subheader("ملخص الأعداد" if is_arabic else "Summary Counts")
+c1, c2, c3, c4 = st.columns(4)
+c1.metric(title_total, f"{total:,}")
+c2.metric(title_pos, f"{pos:,}", f"{(pos/total):.1%}" if total else "0%")
+c3.metric(title_neu, f"{neu:,}", f"{(neu/total):.1%}" if total else "0%")
+c4.metric(title_neg, f"{neg:,}", f"{(neg/total):.1%}" if total else "0%")
+
+# ----------------------------
+# رسم مخطط دائري (Pie Chart)
+# ----------------------------
+st.subheader("النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages")
+labels = [title_pos, title_neu, title_neg]
+values = [pos, neu, neg]
+
+fig, ax = plt.subplots()
+ax.pie(values, labels=labels, autopct="%1.1f%%", startangle=90)
+ax.axis('equal')
+st.pyplot(fig)
+
+# ----------------------------
+# ملخص إحصائي نصي
 # ----------------------------
 def simple_summary(df, is_arabic=True):
-    pos = (df["Sentiment"] == "Positive").sum()
-    neg = (df["Sentiment"] == "Negative").sum()
-    neu = (df["Sentiment"] == "Neutral").sum()
-    total = len(df)
     if total == 0:
         return "لا توجد تعليقات متاحة." if is_arabic else "No comments available."
     if is_arabic:
@@ -118,8 +148,5 @@ def simple_summary(df, is_arabic=True):
     else:
         return f"Total comments: {total}. Positive: {pos}, Negative: {neg}, Neutral: {neu}."
 
-# ----------------------------
-# عرض الملخص
-# ----------------------------
 st.subheader("ملخص التعليقات" if is_arabic else "Review Summary")
 st.write(simple_summary(filtered_df, is_arabic))
