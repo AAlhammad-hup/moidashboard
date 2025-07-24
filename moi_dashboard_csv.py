@@ -1,17 +1,26 @@
 import streamlit as st
 import pandas as pd
 from deep_translator import GoogleTranslator
+from transformers import pipeline
 
+# ----------------------------
+# تحميل البيانات
+# ----------------------------
 @st.cache_data
 def load_data():
     return pd.read_csv("moi_sentiment_data.csv")
 
 df = load_data()
 
+# ----------------------------
+# اختيار اللغة
+# ----------------------------
 language = st.sidebar.selectbox("🌐 اختر اللغة | Select Language", ["العربية", "English"])
 is_arabic = language == "العربية"
 
+# ----------------------------
 # ترجمات القطاعات
+# ----------------------------
 sector_translation = {
     "الدفاع المدني": "Civil Defense",
     "الأمن العام": "Public Security",
@@ -35,7 +44,9 @@ sector_translation = {
 }
 sector_translation_rev = {v: k for k, v in sector_translation.items()}
 
+# ----------------------------
 # ترجمات المشاعر
+# ----------------------------
 sentiment_translation = {
     "Positive": "إيجابي",
     "Negative": "سلبي",
@@ -43,10 +54,15 @@ sentiment_translation = {
 }
 sentiment_translation_rev = {v: k for k, v in sentiment_translation.items()}
 
+# ----------------------------
+# عنوان اللوحة
+# ----------------------------
 st.title("لوحة الرصد الأمني" if is_arabic else "Security Sentiment Dashboard")
 st.markdown("تحليل رأي الجمهور حول خدمات وزارة الداخلية" if is_arabic else "Analyzing public opinion on Ministry of Interior services")
 
+# ----------------------------
 # القطاعات
+# ----------------------------
 available_ar_sectors = sorted(df["Sector"].unique())
 available_en_sectors = [sector_translation.get(sec, sec) for sec in available_ar_sectors]
 
@@ -58,14 +74,18 @@ selected_sector_display = st.selectbox(
 selected_arabic_sector = selected_sector_display if is_arabic else sector_translation_rev.get(selected_sector_display, selected_sector_display)
 filtered_df = df[df["Sector"] == selected_arabic_sector].copy()
 
+# ----------------------------
 # الترجمة الفعلية
+# ----------------------------
 def translate_text(text, target="en"):
     try:
         return GoogleTranslator(source='auto', target=target).translate(text)
     except:
         return text  # fallback
 
+# ----------------------------
 # عرض النتائج
+# ----------------------------
 if is_arabic:
     filtered_df["الرأي"] = filtered_df["Sentiment"].map(sentiment_translation).fillna("غير معروف")
     filtered_df["النص"] = filtered_df["Text"]
@@ -83,3 +103,27 @@ else:
     st.write(display_df)
     st.subheader("Overall Sentiment Analysis")
     st.bar_chart(chart_data)
+
+# ----------------------------
+# تلخيص التعليقات باستخدام LLM
+# ----------------------------
+@st.cache_resource
+def load_summarizer():
+    return pipeline("summarization", model="facebook/bart-large-cnn")
+
+summarizer = load_summarizer()
+
+def generate_summary(texts, max_chars=2000):
+    # دمج النصوص في نص واحد (مع قص الطول إذا زاد عن الحد)
+    combined = " ".join(texts)
+    combined = combined[:max_chars]
+    try:
+        summary = summarizer(combined, max_length=100, min_length=30, do_sample=False)
+        return summary[0]['summary_text']
+    except Exception as e:
+        return f"فشل في توليد الملخص: {e}"
+
+st.subheader("ملخص التعليقات" if is_arabic else "Review Summary")
+reviews_to_summarize = filtered_df["Text"].astype(str).tolist()
+summary_text = generate_summary(reviews_to_summarize)
+st.write(summary_text)
