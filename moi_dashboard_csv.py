@@ -19,6 +19,12 @@ language = st.sidebar.selectbox("🌐 اختر اللغة | Select Language", ["
 is_arabic = language == "العربية"
 
 # ----------------------------
+# اختيار حجم النصوص والدائرة
+# ----------------------------
+pie_size = st.sidebar.slider("اختر حجم الدائرة (بيكسل)" if is_arabic else "Select Pie Size (px)", 300, 900, 600)
+text_size = st.sidebar.slider("اختر حجم النص داخل الدائرة" if is_arabic else "Select Text Size", 10, 40, 20)
+
+# ----------------------------
 # ترجمات القطاعات
 # ----------------------------
 sector_translation = {
@@ -136,7 +142,7 @@ c3.metric(title_neu, f"{neu:,}", f"{(neu/total):.1%}" if total else "0%")
 c4.metric(title_neg, f"{neg:,}", f"{(neg/total):.1%}" if total else "0%")
 
 # ----------------------------
-# رسم مخطط دائري باستخدام Plotly (مقاس أكبر)
+# رسم مخطط دائري باستخدام Plotly (مع التحكم في المقاسات)
 # ----------------------------
 st.subheader("النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages")
 labels = [title_pos, title_neu, title_neg]
@@ -147,9 +153,10 @@ fig = px.pie(
     values=values,
     title="النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages",
     color=labels,
-    color_discrete_sequence=['#007bff', '#00cc96', '#ff6361']  # ألوان محسنة
+    color_discrete_sequence=['#007bff', '#00cc96', '#ff6361']
 )
-fig.update_layout(width=600, height=600)  # تكبير حجم المخطط
+fig.update_layout(width=pie_size, height=pie_size)  # التحكم بحجم الدائرة
+fig.update_traces(textfont_size=text_size)          # التحكم بحجم النص
 st.plotly_chart(fig)
 
 # ----------------------------
