@@ -142,7 +142,7 @@ st.subheader("النسب المئوية للرأي" if is_arabic else "Sentiment
 labels = [title_pos, title_neu, title_neg]
 values = [pos, neu, neg]
 
-fig = px.pie(names=labels, values=values, if is_arabic else "Sentiment Percentages")
+fig = px.pie(names=labels, values=values,"النسب المئوية للرأي" if is_arabic else "Sentiment Percentages")
 st.plotly_chart(fig)
 
 # ----------------------------
