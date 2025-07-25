@@ -28,7 +28,7 @@ text_size = st.sidebar.slider("اختر حجم النص داخل الدائرة"
 # ترجمات القطاعات
 # ----------------------------
 sector_translation = {
-    "جميع القطاعات": "All Sectors",  # <-- القطاع الجديد
+    "جميع القطاعات": "All Sectors",  # القطاع الجديد
     "الدفاع المدني": "Civil Defense",
     "الأمن العام": "Public Security",
     "الجوازات": "Passports",
@@ -84,7 +84,7 @@ selected_arabic_sector = selected_sector_display if is_arabic else sector_transl
 # التصفية
 # ----------------------------
 if selected_arabic_sector == "جميع القطاعات":
-    filtered_df = df.copy()  # كل البيانات
+    filtered_df = df.copy()
 else:
     filtered_df = df[df["Sector"] == selected_arabic_sector].copy()
 
@@ -132,7 +132,7 @@ st.subheader("التحليل العام" if is_arabic else "Overall Sentiment An
 st.bar_chart(chart_data)
 
 # ----------------------------
-# احصاءات المشاعر (KPIs)
+# احصاءات المشاعر (KPIs) بدون النسبة المئوية
 # ----------------------------
 counts = filtered_df["Sentiment"].value_counts()
 pos = counts.get("Positive", 0)
@@ -148,21 +148,21 @@ title_neg   = "سلبي"     if is_arabic else "Negative"
 st.subheader("ملخص الأعداد" if is_arabic else "Summary Counts")
 c1, c2, c3, c4 = st.columns(4)
 c1.metric(title_total, f"{total:,}")
-c2.metric(title_pos, f"{pos:,}", f"{(pos/total):.1%}" if total else "0%")
-c3.metric(title_neu, f"{neu:,}", f"{(neu/total):.1%}" if total else "0%")
-c4.metric(title_neg, f"{neg:,}", f"{(neg/total):.1%}" if total else "0%")
+c2.metric(title_pos, f"{pos:,}")
+c3.metric(title_neu, f"{neu:,}")
+c4.metric(title_neg, f"{neg:,}")
 
 # ----------------------------
 # رسم مخطط دائري باستخدام Plotly
 # ----------------------------
-st.subheader("النسب المئوية للرأي" if is_arabic else "Sentiment Percentages")
+st.subheader("النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages")
 labels = [title_pos, title_neu, title_neg]
 values = [pos, neu, neg]
 
 fig = px.pie(
     names=labels,
     values=values,
-    title=" " if is_arabic else "Sentiment Percentages",
+    title="النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages",
     color=labels,
     color_discrete_sequence=['#007bff', '#00cc96', '#ff6361']
 )
