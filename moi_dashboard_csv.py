@@ -28,7 +28,7 @@ text_size = st.sidebar.slider("اختر حجم النص داخل الدائرة"
 # ترجمات القطاعات
 # ----------------------------
 sector_translation = {
-    "جميع القطاعات": "All Sectors",  # القطاع الجديد
+    "جميع القطاعات": "All Sectors",
     "الدفاع المدني": "Civil Defense",
     "الأمن العام": "Public Security",
     "الجوازات": "Passports",
@@ -77,7 +77,6 @@ selected_sector_display = st.selectbox(
     "اختر القطاع الأمني" if is_arabic else "Select Security Sector",
     available_ar_sectors if is_arabic else available_en_sectors
 )
-
 selected_arabic_sector = selected_sector_display if is_arabic else sector_translation_rev.get(selected_sector_display, selected_sector_display)
 
 # ----------------------------
@@ -87,6 +86,16 @@ if selected_arabic_sector == "جميع القطاعات":
     filtered_df = df.copy()
 else:
     filtered_df = df[df["Sector"] == selected_arabic_sector].copy()
+
+# ----------------------------
+# اختيار عدد التعليقات المطلوب عرضها
+# ----------------------------
+max_comments = st.sidebar.slider(
+    "عدد التعليقات المراد عرضها" if is_arabic else "Number of comments to display",
+    min_value=1,
+    max_value=len(filtered_df),
+    value=min(10, len(filtered_df))
+)
 
 # ----------------------------
 # إزالة اسم القطاع من النصوص (لغير جميع القطاعات)
@@ -106,7 +115,7 @@ def translate_text(text, target="en"):
     try:
         return GoogleTranslator(source='auto', target=target).translate(text)
     except:
-        return text  # fallback
+        return text
 
 # ----------------------------
 # عرض النتائج (فقط إذا لم يتم اختيار جميع القطاعات)
@@ -117,12 +126,12 @@ if selected_arabic_sector != "جميع القطاعات":
         filtered_df["النص"] = filtered_df["Text"]
         display_df = filtered_df[["النص", "الرأي"]]
         st.subheader("النتائج")
-        st.write(display_df)
+        st.write(display_df.head(max_comments))
     else:
         filtered_df["Translated"] = filtered_df["Text"].apply(lambda x: translate_text(x, "en"))
         display_df = filtered_df[["Translated", "Sentiment"]].rename(columns={"Translated": "Comment"})
         st.subheader("Results")
-        st.write(display_df)
+        st.write(display_df.head(max_comments))
 
 # ----------------------------
 # التحليل العام
@@ -155,14 +164,14 @@ c4.metric(title_neg, f"{neg:,}")
 # ----------------------------
 # رسم مخطط دائري باستخدام Plotly
 # ----------------------------
-st.subheader("النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages")
+st.subheader("النسب المئوية للرأي" if is_arabic else "Sentiment Percentages")
 labels = [title_pos, title_neu, title_neg]
 values = [pos, neu, neg]
 
 fig = px.pie(
     names=labels,
     values=values,
-    title="النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages",
+    title="ا " if is_arabic else "Sentiment Percentages",
     color=labels,
     color_discrete_sequence=['#007bff', '#00cc96', '#ff6361']
 )
