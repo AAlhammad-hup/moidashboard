@@ -136,13 +136,20 @@ c3.metric(title_neu, f"{neu:,}", f"{(neu/total):.1%}" if total else "0%")
 c4.metric(title_neg, f"{neg:,}", f"{(neg/total):.1%}" if total else "0%")
 
 # ----------------------------
-# رسم مخطط دائري باستخدام Plotly
+# رسم مخطط دائري باستخدام Plotly (مقاس أكبر)
 # ----------------------------
-st.subheader("النسب المئوية للرأي" if is_arabic else "Sentiment Percentages")
+st.subheader("النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages")
 labels = [title_pos, title_neu, title_neg]
 values = [pos, neu, neg]
 
-fig = px.pie(names=labels, values=values, title=" " if is_arabic else "Sentiment Percentages")
+fig = px.pie(
+    names=labels,
+    values=values,
+    title="النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages",
+    color=labels,
+    color_discrete_sequence=['#007bff', '#00cc96', '#ff6361']  # ألوان محسنة
+)
+fig.update_layout(width=600, height=600)  # تكبير حجم المخطط
 st.plotly_chart(fig)
 
 # ----------------------------
