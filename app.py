@@ -119,14 +119,14 @@ c2.metric(title_pos, f"{pos:,}")
 c3.metric(title_neu, f"{neu:,}")
 c4.metric(title_neg, f"{neg:,}")
 
-st.subheader("النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages")
+st.subheader("النسب المئوية للرأي" if is_arabic else "Sentiment Percentages")
 labels = [title_pos, title_neu, title_neg]
 values = [pos, neu, neg]
 
 fig = px.pie(
     names=labels,
     values=values,
-    title="النسب المئوية للمشاعر" if is_arabic else " ",
+    title=" " if is_arabic else " ",
     color=labels,
     color_discrete_sequence=['#007bff', '#00cc96', '#ff6361']
 )
