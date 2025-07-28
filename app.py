@@ -145,4 +145,4 @@ def simple_summary(df, is_arabic=True):
 st.subheader("ملخص التعليقات" if is_arabic else "Review Summary")
 st.write(simple_summary(filtered_df, is_arabic))
 
-اضفها بالكود
+
