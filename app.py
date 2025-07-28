@@ -15,7 +15,7 @@ df = load_data()
 logo_path = "moi_logo.png"
 if os.path.exists(logo_path):
     logo = Image.open(logo_path)
-    st.image(logo, width=150)
+    st.image(logo, width=100)
 
 # إعدادات اللغة
 language = st.sidebar.selectbox("🌐 اختر اللغة | Select Language", ["العربية", "English"])
