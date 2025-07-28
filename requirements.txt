@@ -1,5 +1,4 @@
 streamlit
 pandas
+plotly
 deep-translator
-Pillow
-textblob
