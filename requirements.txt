@@ -2,3 +2,4 @@ streamlit
 pandas
 deep-translator
 Pillow
+textblob
