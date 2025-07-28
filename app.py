@@ -126,7 +126,7 @@ values = [pos, neu, neg]
 fig = px.pie(
     names=labels,
     values=values,
-    title="النسب المئوية للمشاعر" if is_arabic else "Sentiment Percentages",
+    title="النسب المئوية للمشاعر" if is_arabic else " ",
     color=labels,
     color_discrete_sequence=['#007bff', '#00cc96', '#ff6361']
 )
