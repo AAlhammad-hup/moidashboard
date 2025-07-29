@@ -1,35 +1,54 @@
 import streamlit as st
 import pandas as pd
 from deep_translator import GoogleTranslator
-import plotly.express as px
 from PIL import Image
+import plotly.express as px
+from textblob import TextBlob
+import nltk
 import os
 
+# تحميل موارد NLTK
+nltk.download('punkt')
+
+# دالة تحليل المشاعر
+def detect_sentiment(text):
+    try:
+        blob = TextBlob(text)
+        polarity = blob.sentiment.polarity
+        if polarity > 0.1:
+            return "Positive"
+        elif polarity < -0.1:
+            return "Negative"
+        else:
+            return "Neutral"
+    except:
+        return "Neutral"
+
+# تحميل البيانات من الملف الجديد بدون عامود المشاعر
 @st.cache_data
 def load_data():
-    return pd.read_csv("moi_sentiment_data.csv")
+    df = pd.read_csv("moi_sentiment_data_1000_cleaned.csv")
+    df["Text"] = df["Text"].astype(str).str.strip()
+    df["Sector"] = df["Sector"].astype(str).str.strip()
+    return df
 
 df = load_data()
 
-# عرض شعار وزارة الداخلية
+# عرض شعار الوزارة
 logo_path = "moi_logo.png"
 if os.path.exists(logo_path):
     logo = Image.open(logo_path)
     st.image(logo, width=100)
 
-# إعدادات اللغة
+# اللغة
 language = st.sidebar.selectbox("🌐 اختر اللغة | Select Language", ["العربية", "English"])
-is_arabic = language == "العربية"
+is_arabic = (language == "العربية")
 
-# عناصر التحكم الجانبية
+# إعدادات الرسم
 pie_size = st.sidebar.slider("اختر حجم الدائرة (بيكسل)" if is_arabic else "Select Pie Size (px)", 300, 900, 600)
 text_size = st.sidebar.slider("اختر حجم النص داخل الدائرة" if is_arabic else "Select Text Size", 10, 40, 20)
 
-# عنوان اللوحة
-st.title("لوحة الرصد الأمني" if is_arabic else "Security Sentiment Dashboard")
-st.markdown("تحليل رأي الجمهور حول خدمات وزارة الداخلية" if is_arabic else "Analyzing public opinion on Ministry of Interior services")
-
-# ترجمات القطاعات
+# ترجمة القطاعات
 sector_translation = {
     "جميع القطاعات": "All Sectors",
     "الدفاع المدني": "Civil Defense",
@@ -54,15 +73,14 @@ sector_translation = {
 }
 sector_translation_rev = {v: k for k, v in sector_translation.items()}
 
-# ترجمات المشاعر
+# ترجمة المشاعر
 sentiment_translation = {
     "Positive": "إيجابي",
     "Negative": "سلبي",
     "Neutral": "محايد"
 }
-sentiment_translation_rev = {v: k for k, v in sentiment_translation.items()}
 
-# القطاعات
+# اختيار القطاع
 available_ar_sectors = ["جميع القطاعات"] + sorted([s for s in df["Sector"].unique()])
 available_en_sectors = [sector_translation.get(sec, sec) for sec in available_ar_sectors]
 
@@ -72,11 +90,20 @@ selected_sector_display = st.selectbox(
 )
 selected_arabic_sector = selected_sector_display if is_arabic else sector_translation_rev.get(selected_sector_display, selected_sector_display)
 
-# تصفية البيانات حسب القطاع
-if selected_arabic_sector == "جميع القطاعات":
-    filtered_df = df.copy()
-else:
-    filtered_df = df[df["Sector"] == selected_arabic_sector].copy()
+# تصفية البيانات
+filtered_df = df.copy() if selected_arabic_sector == "جميع القطاعات" else df[df["Sector"] == selected_arabic_sector].copy()
+
+# تنظيف النص
+def clean_comment(text, sector_name):
+    if isinstance(text, str) and text.startswith(sector_name):
+        return text.replace(sector_name + ":", "").strip()
+    return text
+
+if selected_arabic_sector != "جميع القطاعات":
+    filtered_df["Text"] = filtered_df["Text"].apply(lambda x: clean_comment(x, selected_arabic_sector))
+
+# تحليل المشاعر تلقائياً
+filtered_df["Sentiment"] = filtered_df["Text"].apply(detect_sentiment)
 
 # عدد التعليقات
 max_comments = st.sidebar.slider(
@@ -86,15 +113,6 @@ max_comments = st.sidebar.slider(
     value=min(10, len(filtered_df))
 )
 
-# تنظيف نص التعليق
-def clean_comment(text, sector_name):
-    if isinstance(text, str) and text.startswith(sector_name):
-        return text.replace(sector_name + ":", "").strip()
-    return text
-
-if selected_arabic_sector != "جميع القطاعات":
-    filtered_df["Text"] = filtered_df["Text"].apply(lambda x: clean_comment(x, selected_arabic_sector))
-
 # الترجمة
 def translate_text(text, target="en"):
     try:
@@ -102,7 +120,7 @@ def translate_text(text, target="en"):
     except:
         return text
 
-# عرض التعليقات
+# عرض النتائج
 if selected_arabic_sector != "جميع القطاعات":
     if is_arabic:
         filtered_df["الرأي"] = filtered_df["Sentiment"].map(sentiment_translation).fillna("غير معروف")
@@ -116,7 +134,7 @@ if selected_arabic_sector != "جميع القطاعات":
         st.subheader("Results")
         st.write(display_df.head(max_comments))
 
-# التحليل العام
+# الرسم البياني
 chart_data = filtered_df["Sentiment"].map(sentiment_translation if is_arabic else lambda x: x).value_counts()
 st.subheader("التحليل العام" if is_arabic else "Overall Sentiment Analysis")
 st.bar_chart(chart_data)
@@ -148,7 +166,7 @@ values = [pos, neu, neg]
 fig = px.pie(
     names=labels,
     values=values,
-    title=" " if is_arabic else " ",
+    title=" ",
     color=labels,
     color_discrete_sequence=['#007bff', '#00cc96', '#ff6361']
 )
@@ -156,7 +174,7 @@ fig.update_layout(width=pie_size, height=pie_size)
 fig.update_traces(textfont_size=text_size)
 st.plotly_chart(fig)
 
-# ملخص نصي
+# الملخص النصي
 def simple_summary(df, is_arabic=True):
     if total == 0:
         return "لا توجد تعليقات متاحة." if is_arabic else "No comments available."
