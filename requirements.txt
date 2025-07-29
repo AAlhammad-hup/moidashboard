@@ -1,4 +1,8 @@
 streamlit
 pandas
-plotly
 deep-translator==1.11.4
+plotly
+Pillow
+textblob
+nltk
+numpy>=1.23
